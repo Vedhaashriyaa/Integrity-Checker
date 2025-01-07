@@ -1,5 +1,5 @@
-import javax.mail.*;
-import javax.mail.internet.*;
+import jakarta.mail.*;
+import jakarta.mail.internet.*;
 import java.util.Properties;
 import java.util.logging.Logger;
 
@@ -9,31 +9,22 @@ public class EmailNotifier {
     private final String toEmail;
     private static final Logger LOGGER = Logger.getLogger(EmailNotifier.class.getName());
 
-    public EmailNotifier(String configPath) {
-        Properties props = loadConfig(configPath);
-        this.fromEmail = props.getProperty("mail.from");
-        this.toEmail = props.getProperty("mail.to");
-        
+    public EmailNotifier() {
+        this.fromEmail = "vedhaashriyaa@gmail.com";  // Your email address
+        this.toEmail = "vedhaashriyaa@gmail.com";    // Recipient's email address (can be the same as sender)
+
+        Properties props = new Properties();
+        props.put("mail.smtp.auth", "true");
+        props.put("mail.smtp.starttls.enable", "true");
+        props.put("mail.smtp.host", "smtp.gmail.com");
+        props.put("mail.smtp.port", "587");
+
         session = Session.getInstance(props, new Authenticator() {
             @Override
             protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication(
-                    props.getProperty("mail.username"),
-                    props.getProperty("mail.password")
-                );
+                return new PasswordAuthentication("vedhaashriyaa@gmail.com", "your_password");  // Replace "your_password" with your app-specific password
             }
         });
-    }
-
-    private Properties loadConfig(String path) {
-        Properties props = new Properties();
-        try (FileInputStream fis = new FileInputStream(path)) {
-            props.load(fis);
-        } catch (IOException e) {
-            LOGGER.severe("Failed to load email config: " + e.getMessage());
-            throw new RuntimeException("Email configuration failed", e);
-        }
-        return props;
     }
 
     public void sendAlert(String message) {
@@ -49,4 +40,18 @@ public class EmailNotifier {
             LOGGER.severe("Failed to send alert: " + e.getMessage());
         }
     }
+    public void sendTestEmail() {
+        try {
+            Message email = new MimeMessage(session);
+            email.setFrom(new InternetAddress(fromEmail));
+            email.setRecipients(Message.RecipientType.TO, InternetAddress.parse(toEmail));
+            email.setSubject("Test Email");
+            email.setText("This is a test email.");
+            Transport.send(email);
+            LOGGER.info("Test email sent successfully.");
+        } catch (MessagingException e) {
+            LOGGER.severe("Failed to send test email: " + e.getMessage());
+        }
+    }
+
 }
