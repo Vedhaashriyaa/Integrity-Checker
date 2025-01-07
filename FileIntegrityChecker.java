@@ -15,17 +15,23 @@ public class FileIntegrityChecker {
     private static final Logger LOGGER = Logger.getLogger(FileIntegrityChecker.class.getName());
     private volatile boolean running = true;
 
-    public FileIntegrityChecker(String directoryPath, String emailConfig) throws IOException {
+    public FileIntegrityChecker(String directoryPath) throws IOException {
         this.directory = Paths.get(directoryPath);
+        if (!Files.exists(this.directory)) {
+            Files.createDirectories(this.directory); // Create the directory if it doesn't exist
+            LOGGER.info("Directory created: " + directoryPath);
+        } else if (!Files.isDirectory(this.directory)) {
+            throw new IOException("Specified path is not a directory: " + directoryPath);
+        }
         this.fileHashes = new ConcurrentHashMap<>();
         this.watchService = FileSystems.getDefault().newWatchService();
-        this.executorService = Executors.newFixedThreadPool(
-            Runtime.getRuntime().availableProcessors()
-        );
-        this.emailNotifier = new EmailNotifier(emailConfig);
+        this.executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        this.emailNotifier = new EmailNotifier(); // Or adjust as needed
         setupLogger();
         initialScan();
     }
+
+
 
     private void setupLogger() throws IOException {
         FileHandler fh = new FileHandler("integrity_checker.log");
@@ -42,7 +48,7 @@ public class FileIntegrityChecker {
             }
         });
         directory.register(watchService, StandardWatchEventKinds.ENTRY_CREATE,
-            StandardWatchEventKinds.ENTRY_MODIFY, StandardWatchEventKinds.ENTRY_DELETE);
+                StandardWatchEventKinds.ENTRY_MODIFY, StandardWatchEventKinds.ENTRY_DELETE);
     }
 
     private String calculateHash(Path file) {
@@ -95,7 +101,7 @@ public class FileIntegrityChecker {
         } else if (kind == StandardWatchEventKinds.ENTRY_MODIFY) {
             String oldHash = fileHashes.get(file);
             String newHash = calculateHash(file);
-            
+
             if (newHash != null && !newHash.equals(oldHash)) {
                 String message = "File modified: " + file;
                 LOGGER.warning(message);
@@ -123,4 +129,5 @@ public class FileIntegrityChecker {
             executorService.shutdownNow();
         }
     }
+
 }
